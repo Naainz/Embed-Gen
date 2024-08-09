@@ -1,17 +1,29 @@
 {
-  "name": "Embed-Gen",
+  "name": "embed-gen",
   "type": "module",
   "version": "0.0.1",
-  "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
-  },
+    "scripts": {
+      "dev": "concurrently \"npm run astro\" \"npm run start:server\"",
+      "start": "npm run dev",
+      "build": "astro build",
+      "preview": "astro preview",
+      "astro": "astro dev",
+      "start:server": "node server/server.js"
+    },
   "dependencies": {
     "@astrojs/tailwind": "^5.1.0",
     "astro": "^4.13.2",
+    "axios": "^1.7.3",
+    "cheerio": "^1.0.0",
+    "express": "^4.19.2",
     "tailwindcss": "^3.4.9"
+  },
+  "description": "<<<<<<< HEAD # Embed-Gen Generate embeds that work seamlessly across all your favourite social media platforms! ======= # Astro Starter Kit: Basics",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
