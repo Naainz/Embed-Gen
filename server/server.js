@@ -1,6 +1,7 @@
-const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
+import express from 'express';
+import axios from 'axios';
+import { load } from 'cheerio';
+
 const app = express();
 
 app.use(express.json());
@@ -15,10 +16,7 @@ app.get('/embed', async (req, res) => {
     }
 
     try {
-        // Fetch TikTok video metadata by scraping the page
         const videoMetadata = await fetchTikTokMetadata(url);
-
-        // Customize the embed
         const customEmbed = createCustomEmbed(videoMetadata);
 
         res.json(customEmbed);
@@ -32,13 +30,11 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 
-// Function to fetch TikTok video metadata by scraping the page
 async function fetchTikTokMetadata(url) {
     const response = await axios.get(url);
     const html = response.data;
-    const $ = cheerio.load(html);
+    const $ = load(html);
 
-    // Extracting the necessary data
     const title = $('title').text();
     const description = $('meta[name="description"]').attr('content');
     const likes = parseLikes($('[data-e2e="like-count"]').text());
@@ -56,7 +52,6 @@ async function fetchTikTokMetadata(url) {
     };
 }
 
-// Helper function to parse likes/comments
 function parseLikes(likeString) {
     if (likeString.includes('K')) {
         return parseFloat(likeString) * 1000;
@@ -67,7 +62,6 @@ function parseLikes(likeString) {
     }
 }
 
-// Function to create a custom embed
 function createCustomEmbed(metadata) {
     return {
         "embeds": [
@@ -82,8 +76,8 @@ function createCustomEmbed(metadata) {
                 },
                 "video": {
                     "url": metadata.videoUrl,
-                    "width": 1080,  // Adjust based on actual video dimensions
-                    "height": 1920  // Adjust based on actual video dimensions
+                    "width": 1080,
+                    "height": 1920
                 },
                 "thumbnail": {
                     "url": metadata.thumbnailUrl,
