@@ -10,11 +10,13 @@ import Layout from '../layouts/Layout.astro';
         Discover how simple it is to share content from your favorite platforms with Embed-Gen. No sign-ins, no hassle—just seamless sharing.
       </p>
 
-      <div class="bg-gray-900 dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
-        <p class="text-left text-white">
-          <span class="font-bold">request ]</span> 
-          <code class="block bg-gray-800 p-4 rounded mt-2 text-green-500">e.naai.nz/https://tiktok.com/video</code>
-        </p>
+      <div class="relative bg-gray-900 dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
+        <code class="block bg-gray-800 p-4 rounded text-green-500">e.naai.nz/https://tiktok.com/video</code>
+        <button 
+          onclick="navigator.clipboard.writeText('e.naai.nz/https://tiktok.com/video')" 
+          class="absolute right-6 top-1/2 transform -translate-y-1/2 bg-gray-700 bg-opacity-50 text-white p-2 rounded hover:bg-opacity-75 transition">
+          <i class="fas fa-clipboard"></i>
+        </button>
       </div>
 
       <p class="text-lg mb-8">
