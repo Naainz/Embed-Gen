@@ -2,10 +2,9 @@ import type { APIRoute } from 'astro';
 import puppeteer from 'puppeteer';
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const baseUrl = 'http://localhost:3008/';
+  const baseUrl = 'http://localhost:3009/';
   const tiktokUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
 
-  // Ignore requests for favicon.ico
   if (tiktokUrl.endsWith('favicon.ico')) {
     return new Response(null, { status: 204 });
   }
@@ -25,7 +24,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     const videoMetadata = await fetchTikTokMetadata(tiktokUrl);
     console.log("Fetched TikTok Metadata:", videoMetadata);
 
-    const customEmbed = createCustomEmbed(videoMetadata);
+    const customEmbed = createCustomEmbed(tiktokUrl, videoMetadata);
     console.log("Generated Embed:", customEmbed);
 
     return new Response(JSON.stringify(customEmbed), {
@@ -46,26 +45,20 @@ async function fetchTikTokMetadata(url: string) {
   const page = await browser.newPage();
 
   try {
-    // Navigate to the TikTok URL
     await page.goto(url, { waitUntil: 'networkidle2' });
 
-    // Extract necessary metadata
     const username = await page.$eval('meta[property="og:title"]', element => element.getAttribute('content')) || "TikTok";
     const description = await page.$eval('meta[property="og:description"]', element => element.getAttribute('content')) || "";
     const likes = await page.$eval('strong[data-e2e="like-count"]', element => element.textContent.trim());
     const comments = await page.$eval('strong[data-e2e="comment-count"]', element => element.textContent.trim());
 
-    // Extract the video URL from embedded JSON or by inspecting the page's JS context
-    const videoUrl = await page.evaluate(() => {
-      const data = window.__INIT_PROPS__ || window.__DYNAMIC_PAGE_DATA__;
-      return data && data?.props?.pageProps?.itemInfo?.itemStruct?.video?.downloadAddr || null;
-    });
+    const videoSrc = await page.$eval('video', video => video.getAttribute('src'));
 
     console.log("Username extracted:", username);
     console.log("Description extracted:", description);
     console.log("Likes extracted:", likes);
     console.log("Comments extracted:", comments);
-    console.log("Video URL extracted:", videoUrl);
+    console.log("Video URL extracted:", videoSrc);
 
     await browser.close();
 
@@ -74,7 +67,7 @@ async function fetchTikTokMetadata(url: string) {
       description,
       likes,
       comments,
-      videoUrl, // This is the actual video URL
+      videoSrc, // This is the actual video URL from the video tag
     };
 
   } catch (error) {
@@ -84,7 +77,7 @@ async function fetchTikTokMetadata(url: string) {
   }
 }
 
-function createCustomEmbed(metadata: any) {
+function createCustomEmbed(tiktokUrl: string, metadata: any) {
   console.log("Creating embed with metadata:", metadata);
 
   // Create the title with emojis
@@ -94,7 +87,7 @@ function createCustomEmbed(metadata: any) {
     "embeds": [
       {
         "type": "article",
-        "url": metadata.videoUrl,
+        "url": tiktokUrl,  // URL should be the provided TikTok URL
         "title": title,
         "description": `${metadata.description}`,
         "color": 16657493,
@@ -102,13 +95,13 @@ function createCustomEmbed(metadata: any) {
           "name": "e.naai.nz - TikTok"
         },
         "video": {
-          "url": metadata.videoUrl,
+          "url": metadata.videoSrc,
           "width": 1080,
           "height": 1920
         },
         "thumbnail": {
-          "url": metadata.videoUrl,
-          "proxy_url": metadata.videoUrl,
+          "url": metadata.videoSrc,  // Video preview thumbnail is the video itself
+          "proxy_url": metadata.videoSrc,
           "width": 630,
           "height": 630
         }
