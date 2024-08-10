@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import puppeteer from 'puppeteer';
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const baseUrl = 'http://localhost:3002/';
+  const baseUrl = 'http://localhost:3003/';
   const targetUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
 
   if (targetUrl.endsWith('favicon.ico')) {
@@ -94,11 +94,11 @@ async function fetchYouTubeMetadata(url: string) {
   try {
     await page.goto(url, { waitUntil: 'networkidle2' });
 
-    await page.waitForSelector('h1.title.style-scope.ytd-video-primary-info-renderer'); // Wait for the title selector
+    await page.waitForSelector('h1.title.style-scope.ytd-video-primary-info-renderer');
     const title = await page.$eval('h1.title.style-scope.ytd-video-primary-info-renderer', element => element.textContent.trim()) || "YouTube Video";
 
-    await page.waitForSelector('a.yt-simple-endpoint.style-scope.yt-formatted-string'); // Wait for the channel name selector
-    const channelName = await page.$eval('a.yt-simple-endpoint.style-scope.yt-formatted-string', element => element.textContent.trim());
+    // Correctly targeting the producer's name based on your structure
+    const channelName = await page.$eval('div#container.ytd-channel-name a.yt-simple-endpoint.style-scope.yt-formatted-string', element => element.textContent.trim());
 
     const videoId = new URL(url).searchParams.get('v');
     const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
@@ -122,7 +122,6 @@ async function fetchYouTubeMetadata(url: string) {
   }
 }
 
-
 function createTikTokEmbed(tiktokUrl: string, metadata: any) {
   console.log("Creating TikTok embed with metadata:", metadata);
 
@@ -137,7 +136,7 @@ function createTikTokEmbed(tiktokUrl: string, metadata: any) {
         "description": `${metadata.description}`,
         "color": 16657493,
         "provider": {
-          "name": "e.naai.nz - TikTok"
+          "name": " TikTok "
         },
         "video": {
           "url": metadata.videoSrc,
@@ -169,7 +168,7 @@ function createYouTubeEmbed(youtubeUrl: string, metadata: any) {
         "description": `${metadata.channelName}`,
         "color": 16657493,
         "provider": {
-          "name": "e.naai.nz - YouTube"
+          "name": " YouTube "
         },
         "thumbnail": {
           "url": metadata.thumbnailUrl,
