@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import axios from 'axios';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
-export const get: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const tiktokUrl = url.searchParams.get('url');
   
