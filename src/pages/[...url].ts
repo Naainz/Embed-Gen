@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 export const GET: APIRoute = async ({ params, request }) => {
-    const baseUrl = 'http://localhost:3001/';
+    const baseUrl = 'http://localhost:3002/';
     const rawUrl = request.url.replace(baseUrl, '');
     const tiktokUrl = decodeURIComponent(rawUrl);
   
@@ -40,14 +40,15 @@ export const GET: APIRoute = async ({ params, request }) => {
   
   
 
-async function fetchTikTokMetadata(url: string) {
+  async function fetchTikTokMetadata(url: string) {
     const response = await axios.get(url);
     const html = response.data;
     const $ = cheerio.load(html);
-
+  
+    // Use the updated parseLikes function
     const likes = parseLikes($('strong[data-e2e="like-count"]').text());
     const comments = parseLikes($('strong[data-e2e="comment-count"]').text());
-    
+  
     const title = $('title').text();
     const description = $('meta[name="description"]').attr('content');
     const videoUrl = $('meta[property="og:video"]').attr('content');
@@ -63,16 +64,22 @@ async function fetchTikTokMetadata(url: string) {
     };
   }
   
-
-function parseLikes(likeString: string) {
-  if (likeString.includes('K')) {
-    return parseFloat(likeString) * 1000;
-  } else if (likeString.includes('M')) {
-    return parseFloat(likeString) * 1000000;
-  } else {
-    return parseFloat(likeString);
+  function parseLikes(likeString: string) {
+    likeString = likeString.trim();
+  
+    if (!likeString || isNaN(Number(likeString.replace(/[^0-9.]/g, '')))) {
+      return 0;
+    }
+  
+    if (likeString.includes('K')) {
+      return parseFloat(likeString) * 1000;
+    } else if (likeString.includes('M')) {
+      return parseFloat(likeString) * 1000000;
+    } else {
+      return parseFloat(likeString);
+    }
   }
-}
+  
 
 function createCustomEmbed(metadata: any) {
   return {
