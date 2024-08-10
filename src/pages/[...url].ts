@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import puppeteer from 'puppeteer';
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const baseUrl = 'http://localhost:3003/';
+  const baseUrl = 'http://localhost:3004/';
   const targetUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
 
   if (targetUrl.endsWith('favicon.ico')) {
@@ -97,22 +97,21 @@ async function fetchYouTubeMetadata(url: string) {
     await page.waitForSelector('h1.title.style-scope.ytd-video-primary-info-renderer');
     const title = await page.$eval('h1.title.style-scope.ytd-video-primary-info-renderer', element => element.textContent.trim()) || "YouTube Video";
 
-    // Correctly targeting the producer's name based on your structure
     const channelName = await page.$eval('div#container.ytd-channel-name a.yt-simple-endpoint.style-scope.yt-formatted-string', element => element.textContent.trim());
 
     const videoId = new URL(url).searchParams.get('v');
-    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    const videoSrc = `https://www.youtube.com/embed/${videoId}`;
 
     console.log("Title extracted:", title);
     console.log("Channel Name extracted:", channelName);
-    console.log("Thumbnail URL generated:", thumbnailUrl);
+    console.log("Video URL generated:", videoSrc);
 
     await browser.close();
 
     return {
       title,
       channelName,
-      thumbnailUrl,
+      videoSrc,
     };
 
   } catch (error) {
@@ -136,7 +135,7 @@ function createTikTokEmbed(tiktokUrl: string, metadata: any) {
         "description": `${metadata.description}`,
         "color": 16657493,
         "provider": {
-          "name": " TikTok "
+          "name": " "
         },
         "video": {
           "url": metadata.videoSrc,
@@ -168,11 +167,16 @@ function createYouTubeEmbed(youtubeUrl: string, metadata: any) {
         "description": `${metadata.channelName}`,
         "color": 16657493,
         "provider": {
-          "name": " YouTube "
+          "name": " "
+        },
+        "video": {
+          "url": metadata.videoSrc,
+          "width": 1080,
+          "height": 1920
         },
         "thumbnail": {
-          "url": metadata.thumbnailUrl,
-          "proxy_url": metadata.thumbnailUrl,
+          "url": metadata.videoSrc,
+          "proxy_url": metadata.videoSrc,
           "width": 630,
           "height": 630
         }
