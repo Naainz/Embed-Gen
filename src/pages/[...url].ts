@@ -2,37 +2,46 @@ import type { APIRoute } from 'astro';
 import puppeteer from 'puppeteer';
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const baseUrl = 'http://localhost:3009/';
-  const tiktokUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
+  const baseUrl = 'http://localhost:3001/';
+  const targetUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
 
-  if (tiktokUrl.endsWith('favicon.ico')) {
+  if (targetUrl.endsWith('favicon.ico')) {
     return new Response(null, { status: 204 });
   }
 
-  console.log("TikTok URL being processed:", tiktokUrl);
-
   const tiktokUrlPattern = /^https:\/\/(www\.)?tiktok\.com\/.+/;
+  const youtubeUrlPattern = /^https:\/\/(www\.)?youtube\.com\/watch\?v=.+/;
 
-  if (!tiktokUrl || !tiktokUrlPattern.test(tiktokUrl)) {
-    console.error("Validation failed for URL:", tiktokUrl);
-    return new Response(JSON.stringify({ error: 'Invalid TikTok URL' }), {
+  if (!targetUrl || (!tiktokUrlPattern.test(targetUrl) && !youtubeUrlPattern.test(targetUrl))) {
+    console.error("Validation failed for URL:", targetUrl);
+    return new Response(JSON.stringify({ error: 'Invalid TikTok or YouTube URL' }), {
       status: 400,
     });
   }
 
   try {
-    const videoMetadata = await fetchTikTokMetadata(tiktokUrl);
-    console.log("Fetched TikTok Metadata:", videoMetadata);
+    let videoMetadata, customEmbed;
 
-    const customEmbed = createCustomEmbed(tiktokUrl, videoMetadata);
+    if (tiktokUrlPattern.test(targetUrl)) {
+      console.log("TikTok URL being processed:", targetUrl);
+      videoMetadata = await fetchTikTokMetadata(targetUrl);
+      console.log("Fetched TikTok Metadata:", videoMetadata);
+      customEmbed = createTikTokEmbed(targetUrl, videoMetadata);
+    } else if (youtubeUrlPattern.test(targetUrl)) {
+      console.log("YouTube URL being processed:", targetUrl);
+      videoMetadata = await fetchYouTubeMetadata(targetUrl);
+      console.log("Fetched YouTube Metadata:", videoMetadata);
+      customEmbed = createYouTubeEmbed(targetUrl, videoMetadata);
+    }
+
     console.log("Generated Embed:", customEmbed);
 
     return new Response(JSON.stringify(customEmbed), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error("Error occurred while fetching TikTok data:", error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch TikTok data' }), {
+    console.error("Error occurred while fetching video data:", error);
+    return new Response(JSON.stringify({ error: 'Failed to fetch video data' }), {
       status: 500,
     });
   }
@@ -51,7 +60,6 @@ async function fetchTikTokMetadata(url: string) {
     const description = await page.$eval('meta[property="og:description"]', element => element.getAttribute('content')) || "";
     const likes = await page.$eval('strong[data-e2e="like-count"]', element => element.textContent.trim());
     const comments = await page.$eval('strong[data-e2e="comment-count"]', element => element.textContent.trim());
-
     const videoSrc = await page.$eval('video', video => video.getAttribute('src'));
 
     console.log("Username extracted:", username);
@@ -67,7 +75,7 @@ async function fetchTikTokMetadata(url: string) {
       description,
       likes,
       comments,
-      videoSrc, // This is the actual video URL from the video tag
+      videoSrc,
     };
 
   } catch (error) {
@@ -77,17 +85,49 @@ async function fetchTikTokMetadata(url: string) {
   }
 }
 
-function createCustomEmbed(tiktokUrl: string, metadata: any) {
-  console.log("Creating embed with metadata:", metadata);
+async function fetchYouTubeMetadata(url: string) {
+  console.log("Fetching YouTube page:", url);
 
-  // Create the title with emojis
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  try {
+    await page.goto(url, { waitUntil: 'networkidle2' });
+
+    const title = await page.$eval('.style-scope.ytd-watch-metadata', element => element.textContent.trim()) || "YouTube Video";
+    const channelName = await page.$eval('.yt-simple-endpoint.style-scope.yt-formatted-string', element => element.textContent.trim());
+    const videoId = new URL(url).searchParams.get('v');
+    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+
+    console.log("Title extracted:", title);
+    console.log("Channel Name extracted:", channelName);
+    console.log("Thumbnail URL generated:", thumbnailUrl);
+
+    await browser.close();
+
+    return {
+      title,
+      channelName,
+      thumbnailUrl,
+    };
+
+  } catch (error) {
+    console.error("Error during page evaluation:", error);
+    await browser.close();
+    throw error;
+  }
+}
+
+function createTikTokEmbed(tiktokUrl: string, metadata: any) {
+  console.log("Creating TikTok embed with metadata:", metadata);
+
   const title = `${metadata.username} ${metadata.likes} 👍, ${metadata.comments} 💬`;
 
   return {
     "embeds": [
       {
         "type": "article",
-        "url": tiktokUrl,  // URL should be the provided TikTok URL
+        "url": tiktokUrl,
         "title": title,
         "description": `${metadata.description}`,
         "color": 16657493,
@@ -100,8 +140,35 @@ function createCustomEmbed(tiktokUrl: string, metadata: any) {
           "height": 1920
         },
         "thumbnail": {
-          "url": metadata.videoSrc,  // Video preview thumbnail is the video itself
+          "url": metadata.videoSrc,
           "proxy_url": metadata.videoSrc,
+          "width": 630,
+          "height": 630
+        }
+      }
+    ]
+  };
+}
+
+function createYouTubeEmbed(youtubeUrl: string, metadata: any) {
+  console.log("Creating YouTube embed with metadata:", metadata);
+
+  const title = `${metadata.title} by ${metadata.channelName}`;
+
+  return {
+    "embeds": [
+      {
+        "type": "article",
+        "url": youtubeUrl,
+        "title": title,
+        "description": `${metadata.channelName}`,
+        "color": 16657493,
+        "provider": {
+          "name": "e.naai.nz - YouTube"
+        },
+        "thumbnail": {
+          "url": metadata.thumbnailUrl,
+          "proxy_url": metadata.thumbnailUrl,
           "width": 630,
           "height": 630
         }
