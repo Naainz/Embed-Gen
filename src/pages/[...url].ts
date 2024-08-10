@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import puppeteer from 'puppeteer';
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const baseUrl = 'http://localhost:3001/';
+  const baseUrl = 'http://localhost:3002/';
   const targetUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
 
   if (targetUrl.endsWith('favicon.ico')) {
@@ -94,8 +94,12 @@ async function fetchYouTubeMetadata(url: string) {
   try {
     await page.goto(url, { waitUntil: 'networkidle2' });
 
-    const title = await page.$eval('.style-scope.ytd-watch-metadata', element => element.textContent.trim()) || "YouTube Video";
-    const channelName = await page.$eval('.yt-simple-endpoint.style-scope.yt-formatted-string', element => element.textContent.trim());
+    await page.waitForSelector('h1.title.style-scope.ytd-video-primary-info-renderer'); // Wait for the title selector
+    const title = await page.$eval('h1.title.style-scope.ytd-video-primary-info-renderer', element => element.textContent.trim()) || "YouTube Video";
+
+    await page.waitForSelector('a.yt-simple-endpoint.style-scope.yt-formatted-string'); // Wait for the channel name selector
+    const channelName = await page.$eval('a.yt-simple-endpoint.style-scope.yt-formatted-string', element => element.textContent.trim());
+
     const videoId = new URL(url).searchParams.get('v');
     const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 
@@ -117,6 +121,7 @@ async function fetchYouTubeMetadata(url: string) {
     throw error;
   }
 }
+
 
 function createTikTokEmbed(tiktokUrl: string, metadata: any) {
   console.log("Creating TikTok embed with metadata:", metadata);
