@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import puppeteer from 'puppeteer';
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const baseUrl = 'http://localhost:3004/';
+  const baseUrl = 'http://localhost:3000/';
   const targetUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
 
   if (targetUrl.endsWith('favicon.ico')) {
