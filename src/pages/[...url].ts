@@ -2,9 +2,13 @@ import type { APIRoute } from 'astro';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-export const get: APIRoute = async ({ params, request }) => {
-  const baseUrl = 'http://localhost:4322/';
+export const GET: APIRoute = async ({ params, request }) => {
+  const baseUrl = 'http://localhost:3000/';
   const tiktokUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
+
+  if (tiktokUrl.endsWith('favicon.ico')) {
+    return new Response(null, { status: 204 }); // 204 No Content
+  }
 
   console.log("Received TikTok URL:", tiktokUrl);
 
