@@ -1,9 +1,8 @@
 import type { APIRoute } from 'astro';
-import axios from 'axios';
-import * as cheerio from 'cheerio';
+import puppeteer from 'puppeteer';
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const baseUrl = 'http://localhost:3003/';
+  const baseUrl = 'http://localhost:3004/';
   const tiktokUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
 
   if (tiktokUrl.endsWith('favicon.ico')) {
@@ -42,31 +41,40 @@ export const GET: APIRoute = async ({ params, request }) => {
 async function fetchTikTokMetadata(url: string) {
   console.log("Fetching TikTok page:", url);
 
-  const response = await axios.get(url);
-  const html = response.data;
-  const $ = cheerio.load(html);
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
 
-  // Extract the title, likes, comments, and thumbnail URL
-  const title = $('meta[property="og:title"]').attr('content') || "TikTok";
-  const description = $('meta[property="og:description"]').attr('content') || "";
-  const likes = $('strong[data-e2e="like-count"]').text().trim();
-  const comments = $('strong[data-e2e="comment-count"]').text().trim();
-  const thumbnailUrl = $('meta[property="og:image"]').attr('content');
+  try {
+    await page.goto(url, { waitUntil: 'networkidle2' });
 
-  console.log("Title extracted:", title);
-  console.log("Description extracted:", description);
-  console.log("Likes extracted:", likes);
-  console.log("Comments extracted:", comments);
-  console.log("Thumbnail URL extracted:", thumbnailUrl);
+    const title = await page.$eval('meta[property="og:title"]', element => element.getAttribute('content')) || "TikTok";
+    const description = await page.$eval('meta[property="og:description"]', element => element.getAttribute('content')) || "";
+    const likes = await page.$eval('strong[data-e2e="like-count"]', element => element.textContent.trim());
+    const comments = await page.$eval('strong[data-e2e="comment-count"]', element => element.textContent.trim());
+    const thumbnailUrl = await page.$eval('meta[property="og:image"]', element => element.getAttribute('content'));
 
-  return {
-    title,
-    description,
-    likes,   
-    comments, 
-    videoUrl: url, // Use the original URL as the video URL
-    thumbnailUrl,
-  };
+    console.log("Title extracted:", title);
+    console.log("Description extracted:", description);
+    console.log("Likes extracted:", likes);
+    console.log("Comments extracted:", comments);
+    console.log("Thumbnail URL extracted:", thumbnailUrl);
+
+    await browser.close();
+
+    return {
+      title,
+      description,
+      likes, 
+      comments,
+      videoUrl: url,
+      thumbnailUrl,
+    };
+
+  } catch (error) {
+    console.error("Error during page evaluation:", error);
+    await browser.close();
+    throw error;
+  }
 }
 
 function createCustomEmbed(metadata: any) {
