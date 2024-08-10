@@ -2,16 +2,15 @@ import type { APIRoute } from 'astro';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-export const GET: APIRoute = async ({ request }) => {
-  const url = new URL(request.url);
-  const tiktokUrl = url.searchParams.get('url');
-  
-  console.log("Received TikTok URL:", tiktokUrl);  // Debugging line
+export const get: APIRoute = async ({ params, request }) => {
+  const baseUrl = 'http://localhost:4322/';
+  const tiktokUrl = decodeURIComponent(request.url.replace(baseUrl, ''));
+
+  console.log("Received TikTok URL:", tiktokUrl);
 
   const tiktokUrlPattern = /^https:\/\/(www\.)?tiktok\.com\/.+/;
 
   if (!tiktokUrl || !tiktokUrlPattern.test(tiktokUrl)) {
-    console.error("Validation failed for URL:", tiktokUrl);  // Debugging line
     return new Response(JSON.stringify({ error: 'Invalid TikTok URL' }), {
       status: 400,
     });
